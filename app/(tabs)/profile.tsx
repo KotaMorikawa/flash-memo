@@ -9,6 +9,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useAuth, useUser } from '@clerk/clerk-expo';
 import {
   User,
   Settings,
@@ -22,49 +23,66 @@ import {
 } from 'lucide-react-native';
 
 export default function ProfileScreen() {
+  const { user } = useUser();
+  const { signOut } = useAuth();
+
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(false);
   const [offlineReadingEnabled, setOfflineReadingEnabled] = useState(true);
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: () => {
-          // Handle sign out
-          console.log('Signing out...');
-        }},
-      ]
-    );
+    Alert.alert('サインアウト', 'サインアウトしてもよろしいですか？', [
+      { text: 'キャンセル', style: 'cancel' },
+      {
+        text: 'サインアウト',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await signOut();
+          } catch (err) {
+            console.error('サインアウトエラー:', err);
+            Alert.alert(
+              'エラー',
+              'サインアウトに失敗しました。もう一度お試しください。',
+            );
+          }
+        },
+      },
+    ]);
   };
 
   const handleClearData = () => {
     Alert.alert(
-      'Clear All Data',
-      'This will permanently delete all your saved links. This action cannot be undone.',
+      'すべてのデータを削除',
+      '保存されたすべてのリンクが完全に削除されます。この操作は元に戻せません。',
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear All', style: 'destructive', onPress: () => {
-          // Handle clear data
-          console.log('Clearing all data...');
-        }},
-      ]
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: 'すべて削除',
+          style: 'destructive',
+          onPress: () => {
+            // Handle clear data
+            console.log('Clearing all data...');
+          },
+        },
+      ],
     );
   };
 
   const handleExportData = () => {
     Alert.alert(
-      'Export Data',
-      'Export all your saved links as a JSON file.',
+      'データのエクスポート',
+      '保存されたすべてのリンクをJSONファイルとしてエクスポートします。',
       [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Export', onPress: () => {
-          // Handle export
-          console.log('Exporting data...');
-        }},
-      ]
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: 'エクスポート',
+          onPress: () => {
+            // Handle export
+            console.log('Exporting data...');
+          },
+        },
+      ],
     );
   };
 
@@ -74,28 +92,23 @@ export default function ProfileScreen() {
     subtitle?: string,
     onPress?: () => void,
     rightElement?: React.ReactNode,
-    showChevron = false
+    showChevron = false,
   ) => (
     <TouchableOpacity
       style={styles.settingItem}
       onPress={onPress}
-      disabled={!onPress}>
+      disabled={!onPress}
+    >
       <View style={styles.settingLeft}>
-        <View style={styles.settingIcon}>
-          {icon}
-        </View>
+        <View style={styles.settingIcon}>{icon}</View>
         <View style={styles.settingContent}>
           <Text style={styles.settingTitle}>{title}</Text>
-          {subtitle && (
-            <Text style={styles.settingSubtitle}>{subtitle}</Text>
-          )}
+          {subtitle && <Text style={styles.settingSubtitle}>{subtitle}</Text>}
         </View>
       </View>
       <View style={styles.settingRight}>
         {rightElement}
-        {showChevron && (
-          <ChevronRight size={20} color="#8E8E93" />
-        )}
+        {showChevron && <ChevronRight size={20} color="#8E8E93" />}
       </View>
     </TouchableOpacity>
   );
@@ -109,98 +122,102 @@ export default function ProfileScreen() {
               <User size={32} color="#007AFF" />
             </View>
             <View style={styles.profileInfo}>
-              <Text style={styles.name}>John Doe</Text>
-              <Text style={styles.email}>john.doe@example.com</Text>
+              <Text style={styles.name}>
+                {user?.firstName} {user?.lastName}
+              </Text>
+              <Text style={styles.email}>
+                {user?.emailAddresses[0]?.emailAddress}
+              </Text>
             </View>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferences</Text>
+          <Text style={styles.sectionTitle}>設定</Text>
           <View style={styles.settingsGroup}>
             {renderSettingItem(
               <Bell size={20} color="#FF9500" />,
-              'Notifications',
-              'Get notified about new features',
+              '通知',
+              '新機能について通知を受け取る',
               undefined,
               <Switch
                 value={notificationsEnabled}
                 onValueChange={setNotificationsEnabled}
                 trackColor={{ false: '#E5E5EA', true: '#007AFF' }}
                 thumbColor="#FFFFFF"
-              />
+              />,
             )}
-            
+
             {renderSettingItem(
               <Moon size={20} color="#5856D6" />,
-              'Dark Mode',
-              'Use dark theme',
+              'ダークモード',
+              'ダークテーマを使用する',
               undefined,
               <Switch
                 value={darkModeEnabled}
                 onValueChange={setDarkModeEnabled}
                 trackColor={{ false: '#E5E5EA', true: '#007AFF' }}
                 thumbColor="#FFFFFF"
-              />
+              />,
             )}
-            
+
             {renderSettingItem(
               <Download size={20} color="#34C759" />,
-              'Offline Reading',
-              'Download articles for offline access',
+              'オフライン読み取り',
+              '記事をダウンロードしてオフラインで読む',
               undefined,
               <Switch
                 value={offlineReadingEnabled}
                 onValueChange={setOfflineReadingEnabled}
                 trackColor={{ false: '#E5E5EA', true: '#007AFF' }}
                 thumbColor="#FFFFFF"
-              />
+              />,
             )}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Data & Privacy</Text>
+          <Text style={styles.sectionTitle}>データとプライバシー</Text>
           <View style={styles.settingsGroup}>
             {renderSettingItem(
               <Share size={20} color="#007AFF" />,
-              'Export Data',
-              'Download all your saved links',
+              'データのエクスポート',
+              '保存されたすべてのリンクをダウンロード',
               handleExportData,
               undefined,
-              true
+              true,
             )}
-            
+
             {renderSettingItem(
               <Trash2 size={20} color="#FF3B30" />,
-              'Clear All Data',
-              'Permanently delete all saved links',
+              'すべてのデータを削除',
+              '保存されたすべてのリンクを完全に削除',
               handleClearData,
               undefined,
-              true
+              true,
             )}
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Account</Text>
+          <Text style={styles.sectionTitle}>アカウント</Text>
           <View style={styles.settingsGroup}>
             {renderSettingItem(
               <Settings size={20} color="#8E8E93" />,
-              'Account Settings',
-              'Manage your account preferences',
+              'アカウント設定',
+              'アカウントの設定を管理',
               () => console.log('Account settings'),
               undefined,
-              true
+              true,
             )}
-            
+
             {renderSettingItem(
               <LogOut size={20} color="#FF3B30" />,
-              'Sign Out',
-              'Sign out of your account',
+              'サインアウト',
+              'アカウントからサインアウト',
               handleSignOut,
               undefined,
-              true
+              true,
             )}
           </View>
         </View>

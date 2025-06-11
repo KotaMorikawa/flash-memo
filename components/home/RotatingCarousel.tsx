@@ -16,10 +16,8 @@ import Animated, {
   useSharedValue,
   useAnimatedStyle,
   withSpring,
-  withDelay,
   interpolate,
   runOnJS,
-  useAnimatedScrollHandler,
   interpolateColor,
 } from 'react-native-reanimated';
 import {
@@ -99,7 +97,7 @@ function CarouselCard({
       distanceRatio,
       [0, 1, 2],
       [0, 15, 30], // 回転半径を半分に縮小
-      'clamp'
+      'clamp',
     );
 
     // 3D効果のための軽微な回転（Y軸回転を最小限に）
@@ -108,7 +106,7 @@ function CarouselCard({
       distanceFromCenter,
       [0, itemHeight, 2 * itemHeight],
       [0, 8 * direction, 15 * direction],
-      'clamp'
+      'clamp',
     );
 
     // スケール効果（中央が最大） - 距離ベースで確実に計算
@@ -116,7 +114,7 @@ function CarouselCard({
       distanceFromCenter,
       [0, itemHeight, 2 * itemHeight],
       [1, 0.8, 0.6],
-      'clamp'
+      'clamp',
     );
 
     // 透明度効果（距離ベースで確実に計算）
@@ -124,7 +122,7 @@ function CarouselCard({
       distanceFromCenter,
       [0, itemHeight, 2 * itemHeight],
       [1.0, 0.7, 0.4],
-      'clamp'
+      'clamp',
     );
 
     // Z-indexの調整（中央が最前面）
@@ -132,7 +130,7 @@ function CarouselCard({
       distanceFromCenter,
       [0, itemHeight, 2 * itemHeight],
       [100, 2, 1],
-      'clamp'
+      'clamp',
     );
 
     return {
@@ -190,7 +188,7 @@ function CarouselCard({
       scrollY.value,
       inputRange,
       [0.05, 0.3, 0.05],
-      'clamp'
+      'clamp',
     );
 
     return {

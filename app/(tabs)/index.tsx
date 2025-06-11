@@ -7,32 +7,46 @@ import {
   RefreshControl,
   Alert,
   Linking,
-  ScrollView,
-  Dimensions,
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Plus, Filter, RotateCcw, BookOpen, Target } from 'lucide-react-native';
+import {
+  SafeAreaView,
+  useSafeAreaInsets,
+} from 'react-native-safe-area-context';
+
+import { Filter, RotateCcw, BookOpen, Target } from 'lucide-react-native';
 import StackedList from '@/components/home/StackedList';
 import ReadLinksList from '@/components/home/ReadLinksList';
 import AddLinkModal from '@/components/AddLinkModal';
 import TagFilter from '@/components/TagFilter';
 import RotatingCarousel from '@/components/home/RotatingCarousel';
 import { SavedLink } from '@/types';
-import { mockLinks, popularTags } from '@/utils/mockData';
+import { popularTags } from '@/utils/mockData';
+import { convertConvexLinksToSavedLinks } from '@/utils/convexUtils';
 import Animated, {
   useSharedValue,
   useAnimatedStyle,
-  withSpring,
   interpolate,
   useAnimatedScrollHandler,
 } from 'react-native-reanimated';
-
-const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
+import { useQuery, useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
-  const [links, setLinks] = useState<SavedLink[]>(mockLinks);
+
+  // Convexからデータを取得
+  const convexLinksRaw = useQuery(api.links.getUserLinks);
+  const links = useMemo(() => {
+    const convexLinks = convexLinksRaw || [];
+    return convertConvexLinksToSavedLinks(convexLinks);
+  }, [convexLinksRaw]);
+
+  // Convex mutations
+  const markAsReadMutation = useMutation(api.links.markAsRead);
+  const toggleReadStatusMutation = useMutation(api.links.toggleReadStatus);
+  const deleteLinkMutation = useMutation(api.links.deleteLink);
+  const saveLinkMutation = useMutation(api.links.saveLink);
+
   const [refreshing, setRefreshing] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
@@ -40,7 +54,6 @@ export default function HomeScreen() {
   const [activeTab, setActiveTab] = useState<'unread' | 'read'>('unread');
   const [fanExpandedLinks, setFanExpandedLinks] = useState<SavedLink[]>([]);
   const [showFanExpanded, setShowFanExpanded] = useState(false);
-  const [isLongPressing, setIsLongPressing] = useState(false);
 
   const scrollY = useSharedValue(0);
 
@@ -57,7 +70,7 @@ export default function HomeScreen() {
     // タグによるフィルタリング
     if (selectedTags.length > 0) {
       filtered = filtered.filter((link) =>
-        selectedTags.some((tag) => link.tags.includes(tag))
+        selectedTags.some((tag) => link.tags.includes(tag)),
       );
     }
 
@@ -86,19 +99,22 @@ export default function HomeScreen() {
     };
   });
 
-  const handleRefresh = () => {
+  const handleRefresh = async () => {
     setRefreshing(true);
+    // Convexは自動的にデータをrefreshするため、少し待機するだけ
     setTimeout(() => {
       setRefreshing(false);
     }, 1000);
   };
 
-  const handleLinkPress = (link: SavedLink) => {
+  const handleLinkPress = async (link: SavedLink) => {
     // 未読タブの場合のみ既読にマーク
-    if (activeTab === 'unread') {
-      setLinks((prev) =>
-        prev.map((l) => (l.id === link.id ? { ...l, isRead: true } : l))
-      );
+    if (activeTab === 'unread' && !link.isRead) {
+      try {
+        await markAsReadMutation({ linkId: link.id as any });
+      } catch (error) {
+        console.error('Error marking as read:', error);
+      }
     }
 
     Linking.openURL(link.url).catch(() => {
@@ -110,12 +126,11 @@ export default function HomeScreen() {
     // 同じ日付のリンクを取得してカード展開
     const linkDate = link.createdAt.toISOString().split('T')[0];
     const sameDateLinks = filteredLinks.filter(
-      (l) => l.createdAt.toISOString().split('T')[0] === linkDate
+      (l) => l.createdAt.toISOString().split('T')[0] === linkDate,
     );
 
     if (sameDateLinks.length > 1) {
       // 複数のカードがある場合は手札展開
-      setIsLongPressing(true);
       setFanExpandedLinks(sameDateLinks);
       setShowFanExpanded(true);
     } else {
@@ -134,87 +149,56 @@ export default function HomeScreen() {
             style: 'destructive',
             onPress: () => deleteLink(link.id),
           },
-        ]
+        ],
       );
     }
   };
 
   const handleLongPressEnd = () => {
     // 長押し終了時にモーダルを閉じる
-    setIsLongPressing(false);
     setShowFanExpanded(false);
     setFanExpandedLinks([]);
   };
 
-  const handleFanCardLongPress = (link: SavedLink) => {
-    // 手札内のカード長押し時の処理
-    Alert.alert(
-      'Link Options',
-      `What would you like to do with "${link.title}"?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: link.isRead ? 'Mark as Unread' : 'Mark as Read',
-          onPress: () => toggleReadStatus(link.id),
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => deleteLink(link.id),
-        },
-      ]
-    );
+  const toggleReadStatus = async (id: string) => {
+    try {
+      await toggleReadStatusMutation({ linkId: id as any });
+    } catch (error) {
+      console.error('Error toggling read status:', error);
+      Alert.alert('Error', 'Failed to update read status');
+    }
   };
 
-  const toggleReadStatus = (id: string) => {
-    setLinks((prev) =>
-      prev.map((link) =>
-        link.id === id ? { ...link, isRead: !link.isRead } : link
-      )
-    );
+  const deleteLink = async (id: string) => {
+    try {
+      await deleteLinkMutation({ linkId: id as any });
+    } catch (error) {
+      console.error('Error deleting link:', error);
+      Alert.alert('Error', 'Failed to delete link');
+    }
   };
 
-  const deleteLink = (id: string) => {
-    setLinks((prev) => prev.filter((link) => link.id !== id));
-  };
+  const handleAddLink = async (url: string, tags: string[]) => {
+    try {
+      await saveLinkMutation({
+        url,
+        title: 'Loading...',
+        description: 'Fetching content...',
+        tags,
+        readingTime: 5,
+        source: 'Manual Input',
+      });
 
-  const handleAddLink = (url: string, tags: string[]) => {
-    const newLink: SavedLink = {
-      id: Date.now().toString(),
-      url,
-      title: 'Loading...',
-      description: 'Fetching content...',
-      tags,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isRead: false,
-    };
-
-    setLinks((prev) => [newLink, ...prev]);
-
-    setTimeout(() => {
-      setLinks((prev) =>
-        prev.map((link) =>
-          link.id === newLink.id
-            ? {
-                ...link,
-                title: 'New Article from Shared Link',
-                description:
-                  'This article was added from the share sheet and contains interesting information about the topic.',
-                thumbnail:
-                  'https://images.pexels.com/photos/261628/pexels-photo-261628.jpeg?auto=compress&cs=tinysrgb&w=400',
-                readingTime: 5,
-                source: 'Shared Content',
-              }
-            : link
-        )
-      );
-    }, 2000);
+      // 実際のアプリでは、ここでURL解析を行い、タイトルや説明を更新する
+    } catch (error) {
+      console.error('Error adding link:', error);
+      Alert.alert('Error', 'Failed to add link');
+    }
   };
 
   const handleTagToggle = (tag: string) => {
     setSelectedTags((prev) =>
-      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]
+      prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
     );
   };
 
@@ -223,8 +207,19 @@ export default function HomeScreen() {
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Reset',
-        onPress: () => {
-          setLinks((prev) => prev.map((link) => ({ ...link, isRead: false })));
+        onPress: async () => {
+          // すべての既読リンクを未読に戻す
+          const readLinks = links.filter((link) => link.isRead);
+          try {
+            await Promise.all(
+              readLinks.map((link) =>
+                toggleReadStatusMutation({ linkId: link.id as any }),
+              ),
+            );
+          } catch (error) {
+            console.error('Error resetting links:', error);
+            Alert.alert('Error', 'Failed to reset reading progress');
+          }
         },
       },
     ]);

@@ -1,0 +1,182 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# 後で読むリストアプリ 実装計画
+
+## フェーズ 1: 基盤環境セットアップ
+
+### ステップ 1.1: 依存関係のセットアップ - Done
+- [x] Clerk React Native SDK を追加
+- [x] Convex クライアントSDK を追加
+- [x] react-native-share-extension を追加
+- [x] react-native-paper (UI) を追加
+- [x] React Query (TanStack Query) を追加
+- [x] その他必要な依存関係を追加
+
+**完了内容:**
+package.json に必要な依存関係を追加し、テスト環境（Jest, Testing Library）を設定
+テスト駆動開発の準備が整いました
+
+### ステップ 1.2: 認証基盤の設定 - Done
+- [x] Clerk Provider の設定
+- [x] Convex Provider との連携設定
+- [x] 認証状態管理の基盤作成
+
+**完了内容:**
+_layout.tsx にClerk、Convex、React Query のプロバイダーを設定
+トークンキャッシュとセキュアストレージの実装も完了
+
+### ステップ 1.3: Convex スキーマ定義 - Done
+- [x] links テーブルスキーマを定義
+- [x] インデックス設計
+- [x] ユーザー認証連携設定
+
+**完了内容:**
+convex/schema.ts でlinksテーブル定義
+必要なインデックス（ユーザー別、URL重複チェック用）を設定
+
+## フェーズ 2: コア機能実装（TDD）
+
+### ステップ 2.1: リンク保存機能のテスト作成 - Done
+- [x] Convex saveLink function のテスト作成
+- [x] URL正規化関数のテスト作成
+- [x] 重複チェック機能のテスト作成
+
+**完了内容:**
+URL正規化機能とConvexリンク保存機能のテストをTDDアプローチで作成
+失敗するダミー実装も含めて準備完了
+
+### ステップ 2.2: リンク保存機能の実装 - Done
+- [x] saveLink Convex mutation の実装
+- [x] URL正規化ユーティリティの実装
+- [x] 重複処理ロジックの実装
+
+**完了内容:**
+URL正規化関数とConvex関数の実装完了
+重複チェック機能と更新ロジックも実装済み
+
+### ステップ 2.3: メタデータ取得機能のテスト作成
+- [ ] Link preview API 取得のテスト作成
+- [ ] Edge LLM 要約機能のテスト作成
+
+### ステップ 2.4: メタデータ取得機能の実装
+- [ ] Convex Action でのlink preview実装
+- [ ] Edge Runtime LLM処理の実装
+
+## フェーズ 3: UI実装（TDD）
+
+### ステップ 3.1: ホーム画面のテスト作成
+- [ ] リンク一覧表示のテスト作成
+- [ ] 無限スクロールのテスト作成
+- [ ] アイテムタップ動作のテスト作成
+
+### ステップ 3.2: ホーム画面の実装
+- [ ] FlatList ベースの一覧画面実装
+- [ ] Convex useQuery フックとの連携
+- [ ] Linking.openURL による外部遷移実装
+
+### ステップ 3.3: Share Extension のテスト作成
+- [ ] iOS Share Extension のテスト作成
+- [ ] Android Share Target のテスト作成
+
+### ステップ 3.4: Share Extension の実装
+- [ ] react-native-share-extension設定
+- [ ] ペイロード処理の実装
+- [ ] Convex への送信実装
+
+## フェーズ 4: 追加機能実装
+
+### ステップ 4.1: 検索・フィルタ機能
+- [ ] タグ機能のテスト・実装
+- [ ] 検索機能のテスト・実装
+
+### ステップ 4.2: オフライン対応
+- [ ] Convex offline queue のテスト・実装
+- [ ] SQLite キャッシュのテスト・実装
+
+### ステップ 4.3: iOS App Intent (ネイティブ拡張)
+- [ ] App Intent モジュールのテスト・実装
+- [ ] Action Button 統合のテスト・実装
+
+## フェーズ 5: 最適化・テスト
+
+### ステップ 5.1: パフォーマンス最適化
+- [ ] レンダリング最適化
+- [ ] メモリ使用量の最適化
+
+### ステップ 5.2: E2E テスト
+- [ ] Detox E2E テストの実装
+- [ ] 主要フローのテストケース作成
+
+### ステップ 5.3: エラーハンドリング・ロギング
+- [ ] Sentry 統合
+- [ ] エラーバウンダリ実装
+
+---
+
+### ステップ 3.1: 認証画面の実装 - Done
+- [x] Clerk認証画面コンポーネントの作成
+- [x] OAuth（Google/Apple）設定の実装
+- [x] 認証フロー統合の実装
+
+**完了内容:**
+AuthScreenコンポーネントとuseWarmUpBrowserフックを作成
+SignedIn/SignedOutによる認証フロー分岐を実装
+
+### ステップ 3.2: Convexデータ統合完了 - Done
+- [x] ホーム画面でConvexクエリを使用開始
+- [x] 読み込み状態とエラーハンドリングの実装
+- [x] リンク操作のmutation関数実装
+- [x] 型安全なConvex統合の完了
+
+**完了内容:**
+クリーンなConvex統合版ホーム画面を作成
+mutation関数（読了状態変更、削除等）をConvexにデプロイ
+読み込み状態とエラーハンドリングを実装
+
+### ステップ 3.3: Share Extension基盤実装 - Done
+- [x] Share Extension Handler コンポーネントの作成
+- [x] URL Scheme 処理の実装
+- [x] Convex連携の実装
+
+**完了内容:**
+ShareExtensionHandlerコンポーネントを作成
+URL正規化と元アプリ判定機能を統合
+Convexへの自動保存機能を実装
+
+### ステップ 3.4: テスト機能追加 - Done
+- [x] テストリンク追加ボタンの実装
+- [x] 開発用UI要素の統合
+
+**完了内容:**
+TestLinkButtonコンポーネントを作成
+複数プラットフォームのテストデータを準備
+
+## 現在のステータス: UI実装フェーズほぼ完了 ✅
+
+**完了した作業:**
+- ✅ 依存関係のインストールと型エラー解決
+- ✅ URL正規化機能の実装とテスト（11/11 テストパス）
+- ✅ Convex プロジェクトのセットアップとデプロイ
+- ✅ Clerk認証統合の実装
+- ✅ 認証要件を含む統合テストの作成（14/14 テストパス）
+- ✅ セキュアなConvex関数の実装とデプロイ
+- ✅ アプリケーションの起動確認
+- ✅ Clerk認証画面の実装と統合
+- ✅ Convexデータ統合の完了
+- ✅ Share Extension基盤の実装
+- ✅ テスト機能の追加
+
+**技術基盤:** 認証、バックエンド、URL処理、認証UI、Share Extension、テスト機能全て実装済み
+
+**利用可能な機能:**
+1. 🔐 **認証**: Google/Apple OAuth認証
+2. 📱 **リンク保存**: Share Extension機能 (URL Scheme)
+3. 🔄 **URL正規化**: Instagram/Twitter/YouTube対応
+4. 📚 **リンク管理**: 未読/既読状態管理、削除機能
+5. 🎨 **UI**: スタック表示、手札展開、アニメーション
+6. 🧪 **テスト**: テストリンク追加機能
+
+**次のアクション:** フェーズ4（追加機能）またはフェーズ5（最適化・テスト）
